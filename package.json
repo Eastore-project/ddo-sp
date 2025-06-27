@@ -1,0 +1,23 @@
+{
+  "name": "ddo-sp-event-listener",
+  "version": "1.0.0",
+  "description": "Server to listen to AllocationCreated smart contract events",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "ethers": "^6.8.0",
+    "dotenv": "^16.3.1",
+    "cids": "^1.1.9",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": ["blockchain", "ethereum", "events", "smart-contract"],
+  "author": "",
+  "license": "MIT"
+} 
