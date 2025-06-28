@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "node --watch src/server.js"
+    "dev": "node --watch src/server.js",
+    "cleanup": "node cleanup-old-files.js"
   },
   "dependencies": {
     "ethers": "^6.8.0",
@@ -17,7 +18,12 @@
   "devDependencies": {
     "nodemon": "^3.0.1"
   },
-  "keywords": ["blockchain", "ethereum", "events", "smart-contract"],
+  "keywords": [
+    "blockchain",
+    "ethereum",
+    "events",
+    "smart-contract"
+  ],
   "author": "",
   "license": "MIT"
-} 
+}

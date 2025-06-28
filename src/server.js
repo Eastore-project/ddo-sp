@@ -19,6 +19,7 @@ const PROCESSOR_CONFIG = {
   FIL_CLIENT_ADDRESS: process.env.FIL_CLIENT_ADDRESS,
   DOWNLOAD_DIR: process.env.DOWNLOAD_DIR,
   START_EPOCH_OFFSET: process.env.START_EPOCH_OFFSET,
+  DELAYED_CLEANUP_HOURS: process.env.DELAYED_CLEANUP_HOURS,
 };
 
 // Contract ABI for the AllocationCreated event

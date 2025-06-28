@@ -16,6 +16,9 @@ export class AllocationProcessor {
     this.startEpochOffset = config.START_EPOCH_OFFSET
       ? parseInt(config.START_EPOCH_OFFSET)
       : null;
+    this.delayedCleanupHours = config.DELAYED_CLEANUP_HOURS
+      ? parseInt(config.DELAYED_CLEANUP_HOURS)
+      : null;
 
     // Validate configuration
     if (!this.filClientAddress) {
@@ -31,6 +34,11 @@ export class AllocationProcessor {
     }
     if (this.startEpochOffset !== null && isNaN(this.startEpochOffset)) {
       throw new Error("START_EPOCH_OFFSET must be a valid number if provided");
+    }
+    if (this.delayedCleanupHours !== null && isNaN(this.delayedCleanupHours)) {
+      throw new Error(
+        "DELAYED_CLEANUP_HOURS must be a valid number if provided"
+      );
     }
   }
 
@@ -122,7 +130,19 @@ export class AllocationProcessor {
 
       // Step 5: Clean up file if command succeeded
       if (success) {
-        await this.cleanupFile(downloadedFile);
+        // Note: File cleanup is disabled because boostd import-direct schedules
+        // the import asynchronously. The file must remain until import is complete.
+        // Use manual cleanup script or configure DELAYED_CLEANUP_HOURS for automatic cleanup.
+
+        if (this.delayedCleanupHours !== null) {
+          this.scheduleDelayedCleanup(downloadedFile);
+        } else {
+          console.log(`📁 File retained for boostd import: ${downloadedFile}`);
+          console.log(
+            `💡 Tip: Set DELAYED_CLEANUP_HOURS or use cleanup-old-files.js script`
+          );
+        }
+
         console.log(`✅ Allocation ${allocIdStr} processed successfully`);
         return true;
       } else {
@@ -176,7 +196,8 @@ export class AllocationProcessor {
       const filepath = path.join(this.downloadDir, filename);
 
       // Save file
-      const buffer = await response.buffer();
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
       await fs.writeFile(filepath, buffer);
 
       // Verify file was written
@@ -250,6 +271,37 @@ export class AllocationProcessor {
     } catch (error) {
       console.error(`⚠️ Failed to cleanup file ${filePath}:`, error.message);
     }
+  }
+
+  async scheduleDelayedCleanup(filePath) {
+    if (this.delayedCleanupHours === null) {
+      console.log(
+        `📁 Delayed cleanup not configured - file will remain: ${filePath}`
+      );
+      return;
+    }
+
+    const delayMs = this.delayedCleanupHours * 60 * 60 * 1000;
+    console.log(
+      `⏰ Scheduling cleanup of ${filePath} in ${this.delayedCleanupHours} hours`
+    );
+
+    setTimeout(async () => {
+      try {
+        await fs.access(filePath); // Check if file still exists
+        await this.cleanupFile(filePath);
+        console.log(`🕐 Delayed cleanup completed for: ${filePath}`);
+      } catch (error) {
+        if (error.code === "ENOENT") {
+          console.log(`📁 File already removed: ${filePath}`);
+        } else {
+          console.error(
+            `❌ Delayed cleanup failed for ${filePath}:`,
+            error.message
+          );
+        }
+      }
+    }, delayMs);
   }
 
   formatBytes(bytes) {

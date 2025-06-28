@@ -56,6 +56,11 @@ FIL_CLIENT_ADDRESS=t3tejq3lb3szsq7spvttqohsfpsju2jof2dbive2qujgz2idqaj2etuolzgbm
 # Download directory for temporary files
 DOWNLOAD_DIR=./downloads
 
+# Optional: Delayed cleanup of successfully processed files (in hours)
+# If specified, files will be automatically deleted after this many hours
+# If not specified, files will remain until manually cleaned up
+# DELAYED_CLEANUP_HOURS=24
+
 # Optional: Starting block number to listen from (leave empty for latest)
 START_BLOCK=
 
@@ -78,6 +83,7 @@ Make sure to set these required environment variables:
 ### Optional Configuration
 
 - `START_EPOCH_OFFSET`: Number of blocks to add to the current block number for start-epoch calculation (e.g., 807). If not specified, boostd commands will run without the --start-epoch flag
+- `DELAYED_CLEANUP_HOURS`: Number of hours to wait before automatically deleting successfully processed files (e.g., 24). If not specified, files will remain until manually cleaned up
 - `START_BLOCK`: Starting block number to fetch past events from (leave empty for latest)
 - `NETWORK_NAME`: Network name for logging purposes
 
@@ -107,6 +113,20 @@ npm start
 
 ```bash
 npm run dev
+```
+
+### Manual File Cleanup
+
+Clean up old downloaded files:
+
+```bash
+npm run cleanup
+```
+
+Set cleanup age threshold with environment variable:
+
+```bash
+CLEANUP_MAX_AGE_HOURS=48 npm run cleanup
 ```
 
 ## How It Works
@@ -144,7 +164,7 @@ When an allocation matches your provider ID, the server automatically:
 3. **File Download**: Downloads the file from the provided URL to your configured download directory
 4. **Start Epoch Calculation**: If START_EPOCH_OFFSET is configured, calculates start-epoch as block number + offset for better timing control
 5. **Boost Integration**: Executes the `boostd import-direct` command with the correct parameters and proper error handling
-6. **Cleanup**: Removes the downloaded file if the boostd command succeeds (keeps it for debugging if it fails)
+6. **File Management**: Manages downloaded files based on configuration - either schedules delayed cleanup or retains files for manual cleanup
 
 ## Start Epoch Configuration
 
@@ -156,6 +176,43 @@ The `START_EPOCH_OFFSET` environment variable allows you to control when your st
 - **Block number unavailable**: If the block number cannot be determined from the event, the command runs without start-epoch and logs a warning
 
 This feature provides better control over deal timing and helps ensure deals activate at the appropriate blockchain epoch.
+
+## File Management and Cleanup
+
+Due to the asynchronous nature of `boostd import-direct`, files cannot be deleted immediately after the command succeeds. The system provides multiple approaches for file cleanup:
+
+### **Automatic Delayed Cleanup**
+Configure `DELAYED_CLEANUP_HOURS` to automatically delete files after a specified time:
+
+```env
+DELAYED_CLEANUP_HOURS=24  # Delete files after 24 hours
+```
+
+This schedules cleanup using in-memory timers. Files are deleted after the specified hours, allowing sufficient time for boostd to complete the import process.
+
+### **Manual Cleanup**
+Use the cleanup script to manually remove old files:
+
+```bash
+# Clean files older than 24 hours (default)
+npm run cleanup
+
+# Clean files older than 48 hours
+CLEANUP_MAX_AGE_HOURS=48 npm run cleanup
+```
+
+### **Cron-based Cleanup (Recommended)**
+Set up automated cleanup with cron for production environments:
+
+```bash
+# Add to crontab (runs daily at 2 AM)
+0 2 * * * cd /path/to/project && npm run cleanup
+```
+
+### **File Retention Strategy**
+- **Successful imports**: Files are retained based on your configuration
+- **Failed imports**: Files are always kept for debugging purposes
+- **Manual override**: Use the cleanup script anytime to remove old files
 
 ## Prerequisites
 
@@ -178,3 +235,5 @@ The server handles graceful shutdown with `Ctrl+C` (SIGINT) or `SIGTERM` signals
 - **Block Number Issues**: If you see warnings about missing block numbers with START_EPOCH_OFFSET configured, check your RPC provider supports full event metadata
 - **Boostd Command Failures**: Check that boostd is properly installed and configured, and verify your FIL_CLIENT_ADDRESS is correct
 - **File Download Issues**: Ensure network access to download URLs and sufficient disk space in your download directory
+- **File Cleanup Issues**: If delayed cleanup isn't working, check that the process stays running, or use manual cleanup with cron jobs
+- **Disk Space**: Monitor your download directory size and adjust cleanup frequency as needed
